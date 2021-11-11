@@ -158,7 +158,7 @@ public class FileStorageService {
             }
 
         }
-        FileConstants.FILE_CACHE.put(type, null);
+        FileConstants.FILE_CACHE.put(type, new ArrayList<>());
     }
 
     /**

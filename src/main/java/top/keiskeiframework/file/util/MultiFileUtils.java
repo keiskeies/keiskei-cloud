@@ -51,7 +51,7 @@ public class MultiFileUtils {
      */
     public static void checkDir(String path) {
         File file = new File(path);
-        if (!file.exists() && !file.isDirectory()) {
+        if (!file.exists() || !file.isDirectory()) {
             if (!file.mkdirs()) {
                 throw new RuntimeException("dir make fail!");
             }

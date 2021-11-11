@@ -1,0 +1,14 @@
+server:
+  port: ${SERVER_PORT:10037}
+  tomcat:
+    max-http-form-post-size: 10GB
+keiskei:
+  file:
+    local:
+      path: C:/temp/file/
+      temp-path: C:/temp/file/tmp/
+spring:
+  servlet:
+    multipart:
+      max-request-size: 10GB
+      max-file-size: 10GB

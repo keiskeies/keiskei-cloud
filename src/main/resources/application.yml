@@ -4,9 +4,8 @@ server:
     max-http-form-post-size: 10GB
 keiskei:
   file:
-    local:
-      path: C:/temp/file/
-      temp-path: C:/temp/file/tmp/
+    path: ${FILE_PATH:/temp/file/}
+    temp-path: ${FILE_PATH_TEMP:/temp/file/tmp/}
 spring:
   servlet:
     multipart:

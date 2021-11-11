@@ -17,23 +17,12 @@ public class FileScheduled {
     private FileStorageService fileStorageService;
 
 
-    @Scheduled(cron = "0 */53 * * * ?")
-    public void getVideoList() {
+    @PostConstruct
+    @Scheduled(cron = "0 */5 * * * ?")
+    public void getFileList() {
+        fileStorageService.getFileInfo(FileUploadType.image.name());
         fileStorageService.getFileInfo(FileUploadType.video.name());
 
-    }
-
-
-    @Scheduled(cron = "0 */59 * * * ?")
-    public void getImageList() {
-        fileStorageService.getFileInfo(FileUploadType.image.name());
-
-    }
-
-    @PostConstruct
-    public void getFileList() {
-        getVideoList();
-        getImageList();
     }
 
 

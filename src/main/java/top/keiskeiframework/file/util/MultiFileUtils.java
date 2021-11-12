@@ -8,7 +8,10 @@ import top.keiskeiframework.common.exception.BizException;
 import top.keiskeiframework.file.dto.MultiFileInfo;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -26,6 +29,7 @@ public class MultiFileUtils {
     private static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
 
     public static File upload(MultiFileInfo fileInfo, String path) {
+        checkDir(path);
         String fileName = fileInfo.getFileName();
         if (StringUtils.isEmpty(fileName)) {
             fileName = fileInfo.getFile().getOriginalFilename();
@@ -114,6 +118,7 @@ public class MultiFileUtils {
      * @return .
      */
     public static File mergingParts(MultiFileInfo fileInfo, String tmpPath, String path) {
+        checkDir(path);
         File tempFile = null;
         try {
             String fileDirName = getTmpName(fileInfo, tmpPath);
@@ -175,6 +180,7 @@ public class MultiFileUtils {
      * @return .
      */
     public static File mergingBlobParts(MultiFileInfo fileInfo, String tmpPath, String path) {
+        checkDir(path);
         // xxx.temp
         String fileTempPath = getBlobTmpPath(fileInfo, tmpPath);
         String fileTempNamePrefix = getBlobTmpNamePrefix(fileInfo, tmpPath);
@@ -272,15 +278,28 @@ public class MultiFileUtils {
      * 向空文件写入二进制数据
      */
     private static void spaceFileWriter(File tempFile, MultiFileInfo fileInfo) {
-        long startPointer = getFileWriterStartPointer(fileInfo.getFile(), fileInfo);
+        long startPointer = getBlobFileWriterStartPointer(fileInfo);
+
+        byte[] blobs = Base64.decodeBase64(fileInfo.getBlobBase64());
+        try (
+                FileOutputStream out = new FileOutputStream(tempFile);
+        ) {
+            out.write(blobs, 0, blobs.length);
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+            try {
+                tempFile.delete();
+            } catch (Exception ignored) {
+            }
+        }
 
         try (
                 FileChannel inChannel = ((FileInputStream) fileInfo.getFile().getInputStream()).getChannel();
                 FileOutputStream out = new FileOutputStream(tempFile, true);
                 FileChannel outChannel = out.getChannel()
         ) {
-
-            outChannel.transferFrom(inChannel, startPointer, fileInfo.getFile().getSize());
+            outChannel.transferFrom(inChannel, startPointer, blobs.length);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -295,6 +314,25 @@ public class MultiFileUtils {
     private synchronized static Long getFileWriterStartPointer(MultipartFile file, MultiFileInfo fileInfo) {
         // TODO Auto-generated method stub
         long chunkSize = file.getSize();
+        int currChunk = fileInfo.getIndex();
+        int allChunks = fileInfo.getPartCount();
+        long allSize = fileInfo.getFileSize();
+        if (currChunk < (allChunks - 1)) {
+            return chunkSize * currChunk;
+        } else if (currChunk == (allChunks - 1)) {
+            return allSize - chunkSize;
+        } else {
+            throw new RuntimeException("file part error!");
+        }
+    }
+    /**
+     * 计算指针开始位置
+     *
+     * @param fileInfo:分片实体类
+     */
+    private synchronized static Long getBlobFileWriterStartPointer(MultiFileInfo fileInfo) {
+        // TODO Auto-generated method stub
+        long chunkSize = 5 * 1024 * 1024;
         int currChunk = fileInfo.getIndex();
         int allChunks = fileInfo.getPartCount();
         long allSize = fileInfo.getFileSize();

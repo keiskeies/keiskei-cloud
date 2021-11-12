@@ -29,11 +29,22 @@ import java.util.List;
  */
 @Controller
 @CrossOrigin
-@RequestMapping("/api/file/{type:image|video}")
+@RequestMapping("/api/file/")
 public class FileStorageController {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    /**
+     * ping
+     *
+     * @return .
+     */
+    @GetMapping("/ping")
+    @ResponseBody
+    public R ping() {
+        return R.ok();
+    }
 
     /**
      * 普通上传
@@ -41,7 +52,7 @@ public class FileStorageController {
      * @param file 文件信息
      * @return .
      */
-    @PostMapping("/upload")
+    @PostMapping("/{type:image|video}/upload")
     @ResponseBody
     public R<FileInfo> upload(
             MultipartFile file,
@@ -59,7 +70,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/uploadPart")
+    @PostMapping("/{type:image|video}/uploadPart")
     public R<Boolean> uploadPart(
             @Validated({UploadPart.class}) MultiFileInfo fileInfo,
             @PathVariable String type
@@ -67,6 +78,7 @@ public class FileStorageController {
         fileStorageService.uploadPart(fileInfo, type);
         return R.ok(true);
     }
+
     /**
      * 上传文件分片
      *
@@ -74,7 +86,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/uploadBlobPart")
+    @PostMapping("/{type:image|video}/uploadBlobPart")
     public R<Boolean> uploadBlobPart(
             @RequestBody @Validated({UploadBlobPart.class}) MultiFileInfo fileInfo,
             @PathVariable String type
@@ -90,13 +102,14 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/mergingPart")
+    @PostMapping("/{type:image|video}/mergingPart")
     public R<FileInfo> mergingPart(
             @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
             @PathVariable String type
     ) {
         return R.ok(fileStorageService.mergingPart(fileInfo, type));
     }
+
     /**
      * 合并文件分片
      *
@@ -104,7 +117,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/mergingBlobPart")
+    @PostMapping("/{type:image|video}/mergingBlobPart")
     public R<FileInfo> mergingBlobPart(
             @RequestBody @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
             @PathVariable String type
@@ -118,7 +131,7 @@ public class FileStorageController {
      * @param fileName 文件名
      * @return .
      */
-    @GetMapping("/exist/{fileName:.+}")
+    @GetMapping("/{type:image|video}/exist/{fileName:.+}")
     @ResponseBody
     public R<FileInfo> exist(
             @PathVariable("fileName") String fileName,
@@ -126,13 +139,14 @@ public class FileStorageController {
     ) {
         return R.ok(fileStorageService.exist(fileName, type));
     }
+
     /**
      * 删除文件
      *
      * @param fileName 文件名
      * @return .
      */
-    @DeleteMapping("/delete/{fileName:.+}")
+    @DeleteMapping("/{type:image|video}/delete/{fileName:.+}")
     @ResponseBody
     public R<FileInfo> delete(
             @PathVariable("fileName") String fileName,
@@ -142,7 +156,7 @@ public class FileStorageController {
         return R.ok();
     }
 
-    @GetMapping("/list")
+    @GetMapping("/{type:image|video}/list")
     @ResponseBody
     public R<Page<FileInfo>> list(@PathVariable String type, @RequestParam(required = false, defaultValue = "1") @Min(1) Integer page) {
         return R.ok(fileStorageService.list(type, page));
@@ -152,18 +166,18 @@ public class FileStorageController {
      * 获取图片
      *
      * @param fileName 文件类型
-     * @param request request
+     * @param request  request
      * @param response response
      * @param process  文件处理参数
      */
-    @GetMapping("/show/{fileName:.+}")
+    @GetMapping("/{type:image|video}/show/{fileName:.+}")
     public void show(@PathVariable("fileName") String fileName,
                      HttpServletRequest request,
                      HttpServletResponse response,
                      @RequestParam(value = "x-oss-process", required = false) String process,
                      @PathVariable String type) {
         try {
-            fileStorageService.show(fileName, type, process, request,response);
+            fileStorageService.show(fileName, type, process, request, response);
         } catch (Exception e) {
             e.printStackTrace();
         }

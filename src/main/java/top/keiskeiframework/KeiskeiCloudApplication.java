@@ -17,7 +17,7 @@ public class KeiskeiCloudApplication {
     @Bean
     public ServletWebServerFactory webServerFactory () {
         TomcatServletWebServerFactory fa = new TomcatServletWebServerFactory();
-        fa.addConnectorCustomizers((TomcatConnectorCustomizer) connector ->
+        fa.addConnectorCustomizers(connector ->
                 connector.setProperty("relaxedQueryChars", "{}[];:"));
         return fa;
     }

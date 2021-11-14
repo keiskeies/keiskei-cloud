@@ -26,8 +26,6 @@ import java.io.Serializable;
 public class MultiFileInfo implements Serializable {
 
     private static final long serialVersionUID = 3563871956771137575L;
-    @NotBlank(groups = {UploadPart.class, UploadBlobPart.class, MergingChunks.class})
-    private String id;
     /**
      * 文件名称
      */
@@ -37,14 +35,14 @@ public class MultiFileInfo implements Serializable {
     /**
      * 文件大小
      */
-    @NotNull(groups = {UploadPart.class, UploadBlobPart.class, MergingChunks.class})
+    @NotNull(groups = {UploadPart.class, UploadBlobPart.class})
     private Long fileSize;
 
     /**
      * 总分片数
      */
-    @NotNull(groups = {UploadPart.class, UploadBlobPart.class, MergingChunks.class})
-    @Min(value = 1, groups = {UploadPart.class, UploadBlobPart.class, MergingChunks.class})
+    @NotNull(groups = {UploadPart.class, UploadBlobPart.class})
+    @Min(value = 1, groups = {UploadPart.class, UploadBlobPart.class})
     private Integer partCount;
 
     /**

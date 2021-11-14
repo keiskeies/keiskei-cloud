@@ -3,11 +3,19 @@ package top.keiskeiframework.file.util;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.apache.catalina.connector.ClientAbortException;
+import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
+import top.keiskeiframework.file.constants.FileConstants;
+import top.keiskeiframework.file.enums.FileUploadType;
 import top.keiskeiframework.file.process.FileProcess;
 import top.keiskeiframework.file.process.ImageProcess;
 import top.keiskeiframework.file.process.VideoProcess;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
@@ -15,6 +23,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Iterator;
 
 /**
  * @author James Chen right_way@foxmail.com
@@ -23,87 +32,171 @@ import java.nio.file.Paths;
 @Slf4j
 public class FileShowUtils {
 
-    private final static String IMAGE_TYPE = "image";
-    private final static String VIDEO_TYPE = "video";
 
-    public static void show(String fileName, String type, String process, HttpServletRequest request, HttpServletResponse response) throws IOException {
-
-        String contentType = Files.probeContentType(Paths.get(fileName));
+    public static void show(String path, String fileName, FileUploadType type, String process, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String contentType = Files.probeContentType(Paths.get(path + fileName));
         response.setContentType(contentType);
-        FileProcess fileProcess = getProcess(process);
 
-        if (null == fileProcess) {
-            showDefault(fileName, request, response);
+        if (StringUtils.hasText(process)) {
+            String[] processes = process.split("/");
+            if (processes.length > 1) {
+                FileProcess fileProcess = new FileProcess();
+
+                switch (type) {
+                    case image:
+                        fileProcess.setImageProcess(new ImageProcess(processes));
+                        image2Image(path, fileName, fileProcess.getImageProcess(), request, response);
+                        return;
+                    case video:
+                        fileProcess.setVideoProcess(new VideoProcess(processes));
+                        video2Image(path, fileName, fileProcess.getVideoProcess(), request, response);
+                        return;
+                }
+            }
+        }
+        switch (type) {
+            case image:
+                showImage(path, fileName, request, response);
+            case video:
+                showVideo(path, fileName, request, response);
+        }
+
+    }
+
+    public static void main(String[] args) throws IOException {
+        System.out.println(FileUtils.getFileType("C:/tmp/file/image/pic_quark_1636519467085.jpg"));
+
+
+        File file = new File("C:/tmp/file/image/pic_quark_1636519467085.jpg");
+
+        Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("WEBP");
+        ImageReader reader = readers.next();
+
+        // 取得图片读入流
+        InputStream source = new FileInputStream(file);
+        ImageInputStream iis = ImageIO.createImageInputStream(source);
+        reader.setInput(iis, true);
+
+        ImageReadParam param = reader.getDefaultReadParam();
+        int imageIndex = 0;
+        int imgWidth = reader.getWidth(imageIndex);
+        int imgHeight = reader.getHeight(imageIndex);
+        System.out.println(imgWidth + ", " + imgHeight);
+
+
+        System.out.println(file.exists());
+        System.out.println(file.length());
+        FileInputStream is = new FileInputStream(file);
+        BufferedImage buff = ImageIO.read(file);
+        System.out.println(buff.getWidth() + ", " + buff.getHeight());
+
+    }
+
+    public static void image2Image(String path, String fileName, ImageProcess imageProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+
+        File file = new File(path, fileName + FileConstants.TEMP_SUFFIX);
+        if (file.exists()) {
+            showImage(path, fileName + FileConstants.TEMP_SUFFIX, request, response);
         } else {
-            if (IMAGE_TYPE.equals(type) && null != fileProcess.getImageProcess()) {
-                image2Image(fileName, fileProcess.getImageProcess(), request, response);
-            } else if (VIDEO_TYPE.equals(type) && null != fileProcess.getVideoProcess()) {
-                video2Image(fileName, fileProcess.getVideoProcess(), request, response);
-            } else {
-                showDefault(fileName, request, response);
+            try {
+                Thumbnails.Builder<File> thumbnails = Thumbnails.of(path + fileName);
+                // 获取文件原始宽高
+                BufferedImage bi = Thumbnails.of(path + fileName).scale(1D).asBufferedImage();
+
+                int srcImgWidth = bi.getWidth();
+                int srcImgHeight = bi.getHeight();
+
+                // 图片处理
+                if (null != imageProcess.getResize()) {
+                    imageProcess.getResize().resize(thumbnails, srcImgWidth, srcImgHeight);
+                } else {
+                    thumbnails.scale(1D);
+                }
+                if (null != imageProcess.getQuality()) {
+                    // 图片质量压缩
+                    imageProcess.getQuality().quality(thumbnails, srcImgWidth, srcImgHeight);
+                }
+                if (null != imageProcess.getCircle()) {
+                    // 图片裁剪压缩
+                    imageProcess.getCircle().circle(thumbnails, srcImgWidth, srcImgHeight);
+                }
+                if (null != imageProcess.getIndexcrop()) {
+                    // 图片分块裁剪
+                    imageProcess.getIndexcrop().indexcrop(thumbnails, srcImgWidth, srcImgHeight);
+                }
+                if (null != imageProcess.getWatermark()) {
+                    // 图片水印
+                    imageProcess.getWatermark().watermark(thumbnails, srcImgWidth, srcImgHeight);
+                }
+                if (null != imageProcess.getFormat()) {
+                    // 图片格式转换
+                    thumbnails.outputFormat(imageProcess.getFormat());
+                    response.setContentType("image/" + imageProcess.getFormat());
+                }
+                if (null != imageProcess.getRotate()) {
+                    // 图片旋转
+                    thumbnails.rotate(imageProcess.getRotate());
+                }
+
+                OutputStream os = response.getOutputStream();
+                thumbnails.toOutputStream(os);
+
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    thumbnails.toOutputStream(fos);
+                }
+            } catch (Exception e) {
+                showImage(path, fileName, request, response);
+
             }
         }
     }
 
-    public static void image2Image(String fileName, ImageProcess imageProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
-
-        Thumbnails.Builder<File> thumbnails = Thumbnails.of(fileName);
-        // 获取文件原始宽高
-        BufferedImage bi = Thumbnails.of(fileName).scale(1D).asBufferedImage();
-        int srcImgWidth = bi.getWidth();
-        int srcImgHeight = bi.getHeight();
-
-        // 图片处理
-        if (null != imageProcess.getResize()) {
-            imageProcess.getResize().resize(thumbnails, srcImgWidth, srcImgHeight);
+    public static void video2Image(String path, String fileName, VideoProcess videoProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
+        File file = new File(path, fileName + FileConstants.TEMP_SUFFIX);
+        if (file.exists()) {
+            showImage(path, fileName + FileConstants.TEMP_SUFFIX, request, response);
         } else {
-            thumbnails.scale(1D);
-        }
-        if (null != imageProcess.getQuality()) {
-            // 图片质量压缩
-            imageProcess.getQuality().quality(thumbnails, srcImgWidth, srcImgHeight);
-        }
-        if (null != imageProcess.getCircle()) {
-            // 图片裁剪压缩
-            imageProcess.getCircle().circle(thumbnails, srcImgWidth, srcImgHeight);
-        }
-        if (null != imageProcess.getIndexcrop()) {
-            // 图片分块裁剪
-            imageProcess.getIndexcrop().indexcrop(thumbnails, srcImgWidth, srcImgHeight);
-        }
-        if (null != imageProcess.getWatermark()) {
-            // 图片水印
-            imageProcess.getWatermark().watermark(thumbnails, srcImgWidth, srcImgHeight);
-        }
-        if (null != imageProcess.getFormat()) {
-            // 图片格式转换
-            thumbnails.outputFormat(imageProcess.getFormat());
-            response.setContentType("image/" + imageProcess.getFormat());
-        }
-        if (null != imageProcess.getRotate()) {
-            // 图片旋转
-            thumbnails.rotate(imageProcess.getRotate());
-        }
-
-        OutputStream os = response.getOutputStream();
-        thumbnails.toOutputStream(os);
-    }
-
-    public static void video2Image(String fileName, VideoProcess videoProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        if (null != videoProcess) {
             if (null != videoProcess.getSnapshot()) {
-                File file = new File(fileName);
-                videoProcess.getSnapshot().snapshot(file, response);
-                return;
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    BufferedImage bufferedImage = videoProcess.getSnapshot().snapshot(new File(path + fileName), response, fos);
+                    String f = StringUtils.hasText(videoProcess.getSnapshot().getF()) ? videoProcess.getSnapshot().getF() : "jpg";
+                    response.setContentType("image/" + f);
+                    OutputStream os = response.getOutputStream();
+                    ImageIO.write(bufferedImage, f, os);
+                    ImageIO.write(bufferedImage, f, fos);
+                    return;
+                }
             }
+            showVideo(path, fileName, request, response);
         }
-        showDefault(fileName, request, response);
+
+    }
+
+    public static void showImage(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
+        File file = new File(path, fileName);
+        response.setContentType(request.getServletContext().getMimeType(fileName));
+        try (
+                InputStream is = new FileInputStream(file);
+                ServletOutputStream os = response.getOutputStream()
+        ) {
+            int bufferLength;
+            byte[] buffer = new byte[StreamUtils.BUFFER_SIZE];
+            while ((bufferLength = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bufferLength);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            response.reset();
+            response.setContentType("application/json;charset=utf-8");
+        }
     }
 
 
-    public static void showDefault(String fileName, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public static void showVideo(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
+        fileName = path + fileName;
         File file = new File(fileName);
-        String contentType = request.getServletContext().getMimeType(fileName); // Files.probeContentType(Paths.get(fileName));
+        String contentType = request.getServletContext().getMimeType(fileName);
         String range = request.getHeader("Range");
         log.info("current request rang:" + range);
         //开始下载位置
@@ -137,7 +230,7 @@ public class FileShowUtils {
             } catch (NumberFormatException e) {
                 startByte = 0;
                 endByte = file.length() - 1;
-                log.error("Range Occur Error,Message:{}",e.getLocalizedMessage());
+                log.error("Range Occur Error,Message:{}", e.getLocalizedMessage());
             }
         }
 
@@ -149,17 +242,12 @@ public class FileShowUtils {
         byte[] fileNameBytes = fileName.getBytes(StandardCharsets.UTF_8);
         fileName = new String(fileNameBytes, 0, fileNameBytes.length, StandardCharsets.ISO_8859_1);
 
-        //各种响应头设置     
-        //支持断点续传，获取部分字节内容：
         response.setHeader("Accept-Ranges", "bytes");
-        //http状态码要为206：表示获取部分内容
         response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
         response.setContentType(contentType);
         response.setHeader("Content-Type", contentType);
-        //inline表示浏览器直接使用，attachment表示下载，fileName表示下载的文件名
         response.setHeader("Content-Disposition", "inline;filename=" + fileName);
         response.setHeader("Content-Length", String.valueOf(contentLength));
-        // Content-Range，格式为：[要下载的开始位置]-[结束位置]/[文件总大小]
         response.setHeader("Content-Range", "bytes " + startByte + "-" + endByte + "/" + file.length());
 
         BufferedOutputStream outputStream = null;
@@ -172,13 +260,10 @@ public class FileShowUtils {
             byte[] buff = new byte[4096];
             int len = 0;
             randomAccessFile.seek(startByte);
-            //warning：判断是否到了最后不足4096（buff的length）个byte这个逻辑（(transmitted + len) <= contentLength）要放前面
-            //不然会会先读取randomAccessFile，造成后面读取位置出错;
             while ((transmitted + len) <= contentLength && (len = randomAccessFile.read(buff)) != -1) {
-                outputStream.write(buff,  0, len);
+                outputStream.write(buff, 0, len);
                 transmitted += len;
             }
-            //处理不足buff.length部分
             if (transmitted < contentLength) {
                 len = randomAccessFile.read(buff, 0, (int) (contentLength - transmitted));
                 outputStream.write(buff, 0, len);
@@ -191,7 +276,6 @@ public class FileShowUtils {
             log.info("下载完毕：" + startByte + "-" + endByte + "：" + transmitted);
         } catch (ClientAbortException e) {
             log.warn("用户停止下载：" + startByte + "-" + endByte + "：" + transmitted);
-            //捕获此异常表示拥护停止下载
         } catch (IOException e) {
             log.error("用户下载IO异常，Message：{}", e.getLocalizedMessage());
         } finally {
@@ -204,27 +288,4 @@ public class FileShowUtils {
             }
         }
     }
-
-    private static FileProcess getProcess(String process) {
-        if (StringUtils.isEmpty(process)) {
-            return null;
-        }
-        String[] processes = process.split("/");
-        if (processes.length <= 1) {
-            return null;
-        }
-        if (IMAGE_TYPE.equals(processes[0])) {
-            FileProcess fileProcess = new FileProcess();
-            fileProcess.setImageProcess(new ImageProcess(processes));
-            return fileProcess;
-        } else if (VIDEO_TYPE.equals(processes[0])) {
-            FileProcess fileProcess = new FileProcess();
-            fileProcess.setVideoProcess(new VideoProcess(processes));
-            return fileProcess;
-        } else {
-            return null;
-        }
-    }
-
-
 }

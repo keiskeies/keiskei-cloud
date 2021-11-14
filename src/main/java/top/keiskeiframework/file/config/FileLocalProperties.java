@@ -3,6 +3,7 @@ package top.keiskeiframework.file.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import top.keiskeiframework.file.enums.FileUploadType;
 
 /**
  * <p>
@@ -20,12 +21,11 @@ public class FileLocalProperties {
      * 文件上传路径
      */
     private String path = "/tmp/file/";
-    public String getConcatPath(String path) {
-        return this.path + path + "/";
-    }
 
-    /**
-     * 文件临时路径
-     */
-    private String tempPath = "/tmp/file/temp/";
+    public String getConcatPath(FileUploadType path) {
+        return this.path + path.path();
+    }
+    public String getConcatTempPath(FileUploadType path) {
+        return this.path + path.temp();
+    }
 }

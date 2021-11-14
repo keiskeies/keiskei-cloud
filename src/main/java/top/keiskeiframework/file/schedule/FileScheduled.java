@@ -26,11 +26,10 @@ public class FileScheduled {
     @PostConstruct
     @Scheduled(cron = "0 */5 * * * ?")
     public void getFileList() {
-        MultiFileUtils.checkDir(fileLocalProperties.getPath());
-        MultiFileUtils.checkDir(fileLocalProperties.getTempPath());
-        fileStorageService.getFileInfo(FileUploadType.image.name());
-        fileStorageService.getFileInfo(FileUploadType.video.name());
-
+        for (FileUploadType fileUploadType : FileUploadType.values()) {
+            MultiFileUtils.checkDir(fileLocalProperties.getConcatTempPath(fileUploadType));
+            fileStorageService.getFileInfo(fileUploadType);
+        }
     }
 
 

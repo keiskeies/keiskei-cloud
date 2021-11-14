@@ -12,6 +12,7 @@ import top.keiskeiframework.file.dto.FileInfo;
 import top.keiskeiframework.file.dto.MultiFileInfo;
 import top.keiskeiframework.file.dto.Page;
 import top.keiskeiframework.file.enums.FileStorageExceptionEnum;
+import top.keiskeiframework.file.enums.FileUploadType;
 import top.keiskeiframework.file.util.FileShowUtils;
 import top.keiskeiframework.file.util.MultiFileUtils;
 
@@ -46,7 +47,7 @@ public class FileStorageService {
     private static final int PAGE_SIZE = 20;
 
 
-    public FileInfo upload(MultiFileInfo fileInfo, String type) {
+    public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
         File file = MultiFileUtils.upload(fileInfo, fileLocalProperties.getConcatPath(type));
         FileInfo result = getFileInfo(file, type);
         FileConstants.FILE_CACHE.get(type).add(result);
@@ -54,20 +55,20 @@ public class FileStorageService {
     }
 
 
-    public void uploadPart(MultiFileInfo fileInfo, String type) {
+    public void uploadPart(MultiFileInfo fileInfo, FileUploadType type) {
         try {
             //切片上传
-            MultiFileUtils.savePartFile(fileInfo, fileLocalProperties.getTempPath());
+            MultiFileUtils.savePartFile(fileInfo, fileLocalProperties.getConcatPath(type));
         } catch (Exception e) {
             e.printStackTrace();
             throw new BizException(FileStorageExceptionEnum.FILE_UPLOAD_FAIL);
         }
     }
 
-    public void uploadBlobPart(MultiFileInfo fileInfo, String type) {
+    public void uploadBlobPart(MultiFileInfo fileInfo, FileUploadType type) {
         try {
             //切片上传
-            MultiFileUtils.saveBlobPartFile(fileInfo, fileLocalProperties.getTempPath());
+            MultiFileUtils.saveBlobPartFile(fileInfo, fileLocalProperties.getConcatPath(type));
         } catch (Exception e) {
             e.printStackTrace();
             throw new BizException(FileStorageExceptionEnum.FILE_UPLOAD_FAIL);
@@ -75,41 +76,29 @@ public class FileStorageService {
     }
 
 
-    public FileInfo mergingPart(MultiFileInfo fileInfo, String type) {
-        File file = MultiFileUtils.mergingParts(
-                fileInfo,
-                fileLocalProperties.getTempPath(),
-                fileLocalProperties.getConcatPath(type)
-        );
-        assert file != null;
-        return getFileInfo(file, type);
-    }
-
-    public FileInfo mergingBlobPart(MultiFileInfo fileInfo, String type) {
-        File file = MultiFileUtils.mergingBlobParts(
-                fileInfo,
-                fileLocalProperties.getTempPath(),
-                fileLocalProperties.getConcatPath(type)
-        );
-        return getFileInfo(file, type);
+    public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
+        File file = MultiFileUtils.mergingParts(fileInfo, fileLocalProperties.getConcatPath(type));
+        FileInfo result = getFileInfo(file, type);
+        FileConstants.FILE_CACHE.get(type).add(0, result);
+        return result;
     }
 
 
-    public FileInfo exist(String fileName, String type) {
+    public FileInfo exist(String fileName, FileUploadType type) {
         File file = MultiFileUtils.exitFile(fileLocalProperties.getConcatPath(type), fileName);
         assert file != null;
         return getFileInfo(file, type);
     }
 
 
-    public void delete(String fileName, String type) {
+    public void delete(String fileName, FileUploadType type) {
         File file = new File(fileLocalProperties.getConcatPath(type), fileName);
-        if (!file.delete()) {
-            throw new RuntimeException("file delete fail");
-        }
+        File fileTemp = new File(fileLocalProperties.getConcatPath(type), fileName + FileConstants.TEMP_SUFFIX);
+        file.deleteOnExit();
+        fileTemp.deleteOnExit();
     }
 
-    public Page<FileInfo> list(String type, int page) {
+    public Page<FileInfo> list(FileUploadType type, int page) {
         int start = (page - 1) * PAGE_SIZE;
         int end = page * PAGE_SIZE;
 
@@ -121,13 +110,13 @@ public class FileStorageService {
     }
 
 
-    public void show(String fileName, String type, String process, HttpServletRequest request, HttpServletResponse response) {
+    public void show(String fileName, FileUploadType type, String process, HttpServletRequest request, HttpServletResponse response) {
 
         try {
             if (null == exist(fileName, type)) {
                 throw new RuntimeException(FileStorageExceptionEnum.FILE_DOWN_FAIL.getMsg());
             }
-            FileShowUtils.show(fileLocalProperties.getConcatPath(type) + fileName, type, process, request, response);
+            FileShowUtils.show(fileLocalProperties.getConcatPath(type), fileName, type, process, request, response);
         } catch (IOException e) {
             e.printStackTrace();
             response.reset();
@@ -139,7 +128,7 @@ public class FileStorageService {
         }
     }
 
-    public void getFileInfo(String type) {
+    public void getFileInfo(FileUploadType type) {
 
         String path = fileLocalProperties.getConcatPath(type);
 
@@ -149,6 +138,9 @@ public class FileStorageService {
             if (null != files && files.length > 0) {
                 List<FileInfo> result = new ArrayList<>(files.length);
                 for (File file1 : files) {
+                    if (file1.isDirectory() || file1.getName().endsWith(FileConstants.TEMP_SUFFIX)) {
+                        continue;
+                    }
                     FileInfo fileInfo = getFileInfo(file1, type);
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
@@ -167,7 +159,7 @@ public class FileStorageService {
      * @param file 文件名称
      * @return .
      */
-    private FileInfo getFileInfo(File file, String type) {
+    private FileInfo getFileInfo(File file, FileUploadType type) {
         String contentType = null;
         try {
             contentType = Files.probeContentType(Paths.get(file.getPath()));

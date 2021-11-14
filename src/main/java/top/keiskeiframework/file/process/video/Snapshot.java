@@ -63,7 +63,7 @@ public class Snapshot {
         }
     }
 
-    public void snapshot(File video, HttpServletResponse response) throws IOException {
+    public BufferedImage snapshot(File video, HttpServletResponse response, FileOutputStream fos) throws IOException {
         FFmpegFrameGrabber ff = new FFmpegFrameGrabber(video);
         ff.start();
         // 截取中间帧图片(具体依实际情况而定)
@@ -105,15 +105,8 @@ public class Snapshot {
 
         BufferedImage thumbnailImage = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
         thumbnailImage.getGraphics().drawImage(srcImage.getScaledInstance(width, height, Image.SCALE_SMOOTH), 0, 0, null);
-
-        if (StringUtils.isEmpty(f)) {
-            f = "jpg";
-        }
-        response.setContentType("image/" + f);
-        OutputStream os = response.getOutputStream();
-        ImageIO.write(thumbnailImage, f, os);
         ff.stop();
-
+        return thumbnailImage;
     }
 
 }

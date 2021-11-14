@@ -9,9 +9,11 @@ import top.keiskeiframework.common.vo.R;
 import top.keiskeiframework.file.annotations.MergingChunks;
 import top.keiskeiframework.file.annotations.UploadBlobPart;
 import top.keiskeiframework.file.annotations.UploadPart;
+import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.dto.FileInfo;
 import top.keiskeiframework.file.dto.MultiFileInfo;
 import top.keiskeiframework.file.dto.Page;
+import top.keiskeiframework.file.enums.FileUploadType;
 import top.keiskeiframework.file.service.FileStorageService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,7 +58,7 @@ public class FileStorageController {
     @ResponseBody
     public R<FileInfo> upload(
             MultipartFile file,
-            @PathVariable String type
+            @PathVariable FileUploadType type
     ) {
         MultiFileInfo fileInfo = new MultiFileInfo(file);
         return R.ok(fileStorageService.upload(fileInfo, type));
@@ -73,7 +75,7 @@ public class FileStorageController {
     @PostMapping("/{type:image|video}/uploadPart")
     public R<Boolean> uploadPart(
             @Validated({UploadPart.class}) MultiFileInfo fileInfo,
-            @PathVariable String type
+            @PathVariable FileUploadType type
     ) {
         fileStorageService.uploadPart(fileInfo, type);
         return R.ok(true);
@@ -89,7 +91,7 @@ public class FileStorageController {
     @PostMapping("/{type:image|video}/uploadBlobPart")
     public R<Boolean> uploadBlobPart(
             @RequestBody @Validated({UploadBlobPart.class}) MultiFileInfo fileInfo,
-            @PathVariable String type
+            @PathVariable FileUploadType type
     ) {
         fileStorageService.uploadBlobPart(fileInfo, type);
         return R.ok(true);
@@ -104,25 +106,10 @@ public class FileStorageController {
     @ResponseBody
     @PostMapping("/{type:image|video}/mergingPart")
     public R<FileInfo> mergingPart(
-            @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
-            @PathVariable String type
+            @RequestBody @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
+            @PathVariable FileUploadType type
     ) {
         return R.ok(fileStorageService.mergingPart(fileInfo, type));
-    }
-
-    /**
-     * 合并文件分片
-     *
-     * @param fileInfo 文件信息
-     * @return .
-     */
-    @ResponseBody
-    @PostMapping("/{type:image|video}/mergingBlobPart")
-    public R<FileInfo> mergingBlobPart(
-            @RequestBody @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
-            @PathVariable String type
-    ) {
-        return R.ok(fileStorageService.mergingBlobPart(fileInfo, type));
     }
 
     /**
@@ -131,13 +118,13 @@ public class FileStorageController {
      * @param fileName 文件名
      * @return .
      */
-    @GetMapping("/{type:image|video}/exist/{fileName:.+}")
+    @GetMapping("/{type:image|video}/exist/{fileName}")
     @ResponseBody
     public R<FileInfo> exist(
             @PathVariable("fileName") String fileName,
-            @PathVariable String type
+            @PathVariable FileUploadType type
     ) {
-        return R.ok(fileStorageService.exist(fileName, type));
+        return R.ok(fileStorageService.exist(fileName.trim(), type));
     }
 
     /**
@@ -146,19 +133,28 @@ public class FileStorageController {
      * @param fileName 文件名
      * @return .
      */
-    @DeleteMapping("/{type:image|video}/delete/{fileName:.+}")
+    @DeleteMapping("/{type:image|video}/delete/{fileName}")
     @ResponseBody
     public R<FileInfo> delete(
             @PathVariable("fileName") String fileName,
-            @PathVariable String type
+            @RequestParam(required = false) Integer index,
+            @PathVariable FileUploadType type
     ) {
-        fileStorageService.delete(fileName, type);
+        fileStorageService.delete(fileName.trim(), type);
+        if (null != index) {
+            FileConstants.FILE_CACHE.get(type).remove(index.intValue());
+        } else {
+            FileConstants.FILE_CACHE.get(type).remove(fileName);
+        }
         return R.ok();
     }
 
     @GetMapping("/{type:image|video}/list")
     @ResponseBody
-    public R<Page<FileInfo>> list(@PathVariable String type, @RequestParam(required = false, defaultValue = "1") @Min(1) Integer page) {
+    public R<Page<FileInfo>> list(
+            @PathVariable FileUploadType type,
+            @RequestParam(required = false, defaultValue = "1") @Min(1) Integer page
+            ) {
         return R.ok(fileStorageService.list(type, page));
     }
 
@@ -170,14 +166,15 @@ public class FileStorageController {
      * @param response response
      * @param process  文件处理参数
      */
-    @GetMapping("/{type:image|video}/show/{fileName:.+}")
+    @GetMapping("/{type:image|video}/show/{fileName}")
     public void show(@PathVariable("fileName") String fileName,
                      HttpServletRequest request,
                      HttpServletResponse response,
                      @RequestParam(value = "x-oss-process", required = false) String process,
-                     @PathVariable String type) {
+                     @PathVariable FileUploadType type
+    ) {
         try {
-            fileStorageService.show(fileName, type, process, request, response);
+            fileStorageService.show(fileName.trim(), type, process, request, response);
         } catch (Exception e) {
             e.printStackTrace();
         }

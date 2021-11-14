@@ -20,6 +20,7 @@ public enum FileTypeEnum {
     GIF("GIF", "47494638"),
     TIFF("TIF", "49492A00"),
     BMP("BMP", "424D"),
+    WEBP("WEBP", "524946"),
     DWG("DWG", "41433130"),
     PSD("PSD", "38425053"),
     RTF("RTF", "7B5C727466"),
@@ -78,12 +79,12 @@ public enum FileTypeEnum {
     /**
      * 文件后缀名
      */
-    private String key;
+    private final String key;
 
     /**
      * 文件魔数
      */
-    private String value;
+    private final String value;
 
     FileTypeEnum(String key, String value) {
         this.key = key;

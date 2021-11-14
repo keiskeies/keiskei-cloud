@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author James Chen right_way@foxmail.com
@@ -94,10 +96,12 @@ public class FileShowUtils {
 
     public static void image2Image(String path, String fileName, ImageProcess imageProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
 
-
-        File file = new File(path, fileName + FileConstants.TEMP_SUFFIX);
+        Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
+        Matcher matcher = pattern.matcher(request.getQueryString());
+        String params = matcher.replaceAll("");
+        File file = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
         if (file.exists()) {
-            showImage(path, fileName + FileConstants.TEMP_SUFFIX, request, response);
+            showImage(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
         } else {
             try {
                 Thumbnails.Builder<File> thumbnails = Thumbnails.of(path + fileName);
@@ -144,6 +148,8 @@ public class FileShowUtils {
 
                 try (FileOutputStream fos = new FileOutputStream(file)) {
                     thumbnails.toOutputStream(fos);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
                 }
             } catch (Exception e) {
                 showImage(path, fileName, request, response);

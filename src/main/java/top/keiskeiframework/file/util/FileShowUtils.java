@@ -65,34 +65,6 @@ public class FileShowUtils {
 
     }
 
-    public static void main(String[] args) throws IOException {
-        System.out.println(FileUtils.getFileType("C:/tmp/file/image/pic_quark_1636519467085.jpg"));
-
-
-        File file = new File("C:/tmp/file/image/pic_quark_1636519467085.jpg");
-
-        Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("WEBP");
-        ImageReader reader = readers.next();
-
-        // 取得图片读入流
-        InputStream source = new FileInputStream(file);
-        ImageInputStream iis = ImageIO.createImageInputStream(source);
-        reader.setInput(iis, true);
-
-        ImageReadParam param = reader.getDefaultReadParam();
-        int imageIndex = 0;
-        int imgWidth = reader.getWidth(imageIndex);
-        int imgHeight = reader.getHeight(imageIndex);
-        System.out.println(imgWidth + ", " + imgHeight);
-
-
-        System.out.println(file.exists());
-        System.out.println(file.length());
-        FileInputStream is = new FileInputStream(file);
-        BufferedImage buff = ImageIO.read(file);
-        System.out.println(buff.getWidth() + ", " + buff.getHeight());
-
-    }
 
     public static void image2Image(String path, String fileName, ImageProcess imageProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
 

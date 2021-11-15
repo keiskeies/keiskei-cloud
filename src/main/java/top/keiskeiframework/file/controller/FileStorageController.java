@@ -150,9 +150,17 @@ public class FileStorageController {
     public R<Page<FileInfo>> list(
             @PathVariable FileUploadType type,
             @RequestParam(required = false, defaultValue = "1") @Min(1) Integer page
-            ) {
+    ) {
         return R.ok(fileStorageService.list(type, page));
     }
+
+    @GetMapping("/{type:image|video}/sort")
+    @ResponseBody
+    public R sort(@PathVariable FileUploadType type) {
+        fileStorageService.sort(type);
+        return R.ok();
+    }
+
 
     /**
      * 获取图片

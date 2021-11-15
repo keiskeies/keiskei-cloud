@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
 import top.keiskeiframework.common.exception.BizException;
 import top.keiskeiframework.common.vo.R;
 import top.keiskeiframework.file.config.FileLocalProperties;
@@ -14,11 +15,13 @@ import top.keiskeiframework.file.dto.Page;
 import top.keiskeiframework.file.enums.FileStorageExceptionEnum;
 import top.keiskeiframework.file.enums.FileUploadType;
 import top.keiskeiframework.file.util.FileShowUtils;
+import top.keiskeiframework.file.util.FileStorageUtils;
 import top.keiskeiframework.file.util.MultiFileUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -30,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * <p>
@@ -118,6 +122,34 @@ public class FileStorageService {
         end = Math.min(end, total);
         List<FileInfo> data = fileInfoCache.subList(start, end);
         return new Page<>(total, data);
+    }
+
+    public void sort(FileUploadType type) {
+        String path = fileLocalProperties.getConcatPath(type);
+        File fileDir = new File(path);
+        File fileNew;
+        File[] files = fileDir.listFiles();
+        if (null != files && files.length > 0) {
+            List<FileInfo> result = new ArrayList<>(files.length);
+            for (File file : files) {
+                if (file.isDirectory() || file.getName().endsWith(FileConstants.TEMP_SUFFIX)) {
+                    continue;
+                }
+                try {
+                    String fileName =  FileStorageUtils.getFileName(file);
+                    fileNew = new File(path + fileName);
+                    file.renameTo(fileNew);
+                    FileInfo fileInfo = getFileInfo(fileNew, type);
+                    result.add(fileInfo);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    FileInfo fileInfo = getFileInfo(file, type);
+                    result.add(fileInfo);
+
+                }
+            }
+            FileConstants.FILE_CACHE.put(type, result);
+        }
     }
 
 

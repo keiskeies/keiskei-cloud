@@ -30,10 +30,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -148,6 +146,7 @@ public class FileStorageService {
 
                 }
             }
+            result = result.stream().sorted(Comparator.comparing(FileInfo::getName)).collect(Collectors.toList());
             FileConstants.FILE_CACHE.put(type, result);
         }
     }
@@ -188,6 +187,7 @@ public class FileStorageService {
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
                 }
+                result = result.stream().sorted(Comparator.comparing(FileInfo::getName)).collect(Collectors.toList());
                 FileConstants.FILE_CACHE.put(type, result);
                 return;
             }

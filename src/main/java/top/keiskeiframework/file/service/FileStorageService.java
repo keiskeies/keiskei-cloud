@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -91,11 +92,21 @@ public class FileStorageService {
     }
 
 
-    public void delete(String fileName, FileUploadType type) {
+    public void delete(String fileName, FileUploadType type, Integer index) {
         File file = new File(fileLocalProperties.getConcatPath(type), fileName);
-        File fileTemp = new File(fileLocalProperties.getConcatPath(type), fileName + FileConstants.TEMP_SUFFIX);
-        file.deleteOnExit();
-        fileTemp.deleteOnExit();
+        file.delete();
+        if (null != index) {
+            FileConstants.FILE_CACHE.get(type).remove(index.intValue());
+        } else {
+            Iterator<FileInfo> fileInfoIterable = FileConstants.FILE_CACHE.get(type).iterator();
+            while (fileInfoIterable.hasNext()) {
+                if (fileInfoIterable.next().getName().equals(fileName)) {
+                    fileInfoIterable.remove();
+                    break;
+                }
+            }
+
+        }
     }
 
     public Page<FileInfo> list(FileUploadType type, int page) {

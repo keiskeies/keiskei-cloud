@@ -140,12 +140,8 @@ public class FileStorageController {
             @RequestParam(required = false) Integer index,
             @PathVariable FileUploadType type
     ) {
-        fileStorageService.delete(fileName.trim(), type);
-        if (null != index) {
-            FileConstants.FILE_CACHE.get(type).remove(index.intValue());
-        } else {
-            FileConstants.FILE_CACHE.get(type).remove(fileName);
-        }
+        fileStorageService.delete(fileName.trim(), type, index);
+
         return R.ok();
     }
 

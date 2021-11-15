@@ -27,7 +27,7 @@ public class FileScheduled {
     @Scheduled(cron = "0 */5 * * * ?")
     public void getFileList() {
         for (FileUploadType fileUploadType : FileUploadType.values()) {
-            MultiFileUtils.checkDir(fileLocalProperties.getConcatTempPath(fileUploadType));
+            MultiFileUtils.checkDir(fileLocalProperties.getConcatPath(fileUploadType));
             fileStorageService.getFileInfo(fileUploadType);
         }
     }

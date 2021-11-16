@@ -149,9 +149,9 @@ public class FileStorageController {
     @ResponseBody
     public R<Page<FileInfo>> list(
             @PathVariable FileUploadType type,
-            @RequestParam(required = false, defaultValue = "1") @Min(1) Integer page
+            @RequestParam(required = false, defaultValue = "0") @Min(0) Integer offset
     ) {
-        return R.ok(fileStorageService.list(type, page));
+        return R.ok(fileStorageService.list(type, offset));
     }
 
     @GetMapping("/{type:image|video}/sort")

@@ -111,14 +111,13 @@ public class FileStorageService {
         }
     }
 
-    public Page<FileInfo> list(FileUploadType type, int page) {
-        int start = (page - 1) * PAGE_SIZE;
-        int end = page * PAGE_SIZE;
+    public Page<FileInfo> list(FileUploadType type, int offset) {
+        int end = offset + PAGE_SIZE;
 
         List<FileInfo> fileInfoCache = FileConstants.FILE_CACHE.get(type);
         int total = fileInfoCache.size();
         end = Math.min(end, total);
-        List<FileInfo> data = fileInfoCache.subList(start, end);
+        List<FileInfo> data = fileInfoCache.subList(offset, end);
         return new Page<>(total, data);
     }
 

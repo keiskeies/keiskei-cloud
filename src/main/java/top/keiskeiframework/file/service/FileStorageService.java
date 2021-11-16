@@ -126,7 +126,7 @@ public class FileStorageService {
                 }
                 result.add(getMd5FileInfo(file, type));
             }
-            result = result.stream().sorted(Comparator.comparing(FileInfo::getName)).collect(Collectors.toList());
+            result = result.stream().sorted(Comparator.comparing(FileInfo::getUploadTime).reversed()).collect(Collectors.toList());
             FileConstants.FILE_CACHE.put(type, result);
         }
     }

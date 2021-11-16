@@ -131,7 +131,10 @@ public class FileShowUtils {
     }
 
     public static void video2Image(String path, String fileName, VideoProcess videoProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        File file = new File(path, fileName + FileConstants.TEMP_SUFFIX);
+        Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
+        Matcher matcher = pattern.matcher(request.getQueryString());
+        String params = matcher.replaceAll("");
+        File file = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
         if (file.exists() && file.length() > 0) {
             showImage(path, fileName + FileConstants.TEMP_SUFFIX, request, response);
         } else {

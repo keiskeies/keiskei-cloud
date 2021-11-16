@@ -48,7 +48,7 @@ public class FileStorageService {
     public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
         File file = MultiFileUtils.upload(fileInfo, fileLocalProperties.getConcatPath(type));
         FileInfo result = getMd5FileInfo(file, type);
-        FileConstants.FILE_CACHE.get(type).add(result);
+        FileConstants.FILE_CACHE.get(type).add(0, result);
         return result;
     }
 

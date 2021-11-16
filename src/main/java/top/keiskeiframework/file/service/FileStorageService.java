@@ -193,7 +193,9 @@ public class FileStorageService {
             }
         }
 
-        return getFileInfo(file, type);
+        result = getFileInfo(file, type);
+        FileConstants.FILE_CACHE.get(type).add(0, result);
+        return result;
     }
     /**
      * 判断是否输出文件路径

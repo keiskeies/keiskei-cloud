@@ -80,8 +80,24 @@ public class FileStorageService {
 
 
     public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
-        File file = MultiFileUtils.mergingParts(fileInfo, fileLocalProperties.getConcatPath(type));
-        FileInfo result = getFileInfo(file, type);
+        String path = fileLocalProperties.getConcatPath(type);
+        File file = MultiFileUtils.mergingParts(fileInfo, path);
+
+        FileInfo result;
+        if (type.getMd5Name()) {
+            try {
+                String fileName =  FileStorageUtils.getFileName(file);
+                File fileNew = new File(path + fileName);
+                file.renameTo(fileNew);
+                result = getFileInfo(fileNew, type);
+                FileConstants.FILE_CACHE.get(type).add(0, result);
+                return result;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        result = getFileInfo(file, type);
         FileConstants.FILE_CACHE.get(type).add(0, result);
         return result;
     }

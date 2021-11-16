@@ -72,7 +72,7 @@ public class FileShowUtils {
         Matcher matcher = pattern.matcher(request.getQueryString());
         String params = matcher.replaceAll("");
         File file = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
-        if (file.exists()) {
+        if (file.exists() && file.length() > 0) {
             showImage(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
         } else {
             try {
@@ -132,7 +132,7 @@ public class FileShowUtils {
 
     public static void video2Image(String path, String fileName, VideoProcess videoProcess, HttpServletRequest request, HttpServletResponse response) throws IOException {
         File file = new File(path, fileName + FileConstants.TEMP_SUFFIX);
-        if (file.exists()) {
+        if (file.exists() && file.length() > 0) {
             showImage(path, fileName + FileConstants.TEMP_SUFFIX, request, response);
         } else {
             if (null != videoProcess.getSnapshot()) {

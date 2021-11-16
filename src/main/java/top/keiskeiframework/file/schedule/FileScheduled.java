@@ -28,7 +28,7 @@ public class FileScheduled {
     public void getFileList() {
         for (FileUploadType fileUploadType : FileUploadType.values()) {
             MultiFileUtils.checkDir(fileLocalProperties.getConcatPath(fileUploadType));
-            fileStorageService.getFileInfo(fileUploadType);
+            fileStorageService.getFileInfoList(fileUploadType);
         }
     }
 

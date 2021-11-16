@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 import top.keiskeiframework.common.exception.BizException;
 import top.keiskeiframework.common.vo.R;
 import top.keiskeiframework.file.config.FileLocalProperties;
@@ -21,11 +20,7 @@ import top.keiskeiframework.file.util.MultiFileUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
@@ -52,7 +47,7 @@ public class FileStorageService {
 
     public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
         File file = MultiFileUtils.upload(fileInfo, fileLocalProperties.getConcatPath(type));
-        FileInfo result = getFileInfo(file, type);
+        FileInfo result = getMd5FileInfo(file, type);
         FileConstants.FILE_CACHE.get(type).add(result);
         return result;
     }
@@ -79,25 +74,11 @@ public class FileStorageService {
     }
 
 
+
     public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
         File file = MultiFileUtils.mergingParts(fileInfo, path);
-
-        FileInfo result;
-        if (type.getMd5Name()) {
-            try {
-                String fileName =  FileStorageUtils.getFileName(file);
-                File fileNew = new File(path + fileName);
-                file.renameTo(fileNew);
-                result = getFileInfo(fileNew, type);
-                FileConstants.FILE_CACHE.get(type).add(0, result);
-                return result;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        result = getFileInfo(file, type);
+        FileInfo result = getMd5FileInfo(file, type);
         FileConstants.FILE_CACHE.get(type).add(0, result);
         return result;
     }
@@ -106,7 +87,7 @@ public class FileStorageService {
     public FileInfo exist(String fileName, FileUploadType type) {
         File file = MultiFileUtils.exitFile(fileLocalProperties.getConcatPath(type), fileName);
         assert file != null;
-        return getFileInfo(file, type);
+        return getFileInfoList(file, type);
     }
 
 
@@ -140,7 +121,6 @@ public class FileStorageService {
     public void sort(FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
         File fileDir = new File(path);
-        File fileNew;
         File[] files = fileDir.listFiles();
         if (null != files && files.length > 0) {
             List<FileInfo> result = new ArrayList<>(files.length);
@@ -148,18 +128,7 @@ public class FileStorageService {
                 if (file.isDirectory() || file.getName().endsWith(FileConstants.TEMP_SUFFIX)) {
                     continue;
                 }
-                try {
-                    String fileName =  FileStorageUtils.getFileName(file);
-                    fileNew = new File(path + fileName);
-                    file.renameTo(fileNew);
-                    FileInfo fileInfo = getFileInfo(fileNew, type);
-                    result.add(fileInfo);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    FileInfo fileInfo = getFileInfo(file, type);
-                    result.add(fileInfo);
-
-                }
+                result.add(getMd5FileInfo(file, type));
             }
             result = result.stream().sorted(Comparator.comparing(FileInfo::getName)).collect(Collectors.toList());
             FileConstants.FILE_CACHE.put(type, result);
@@ -185,7 +154,7 @@ public class FileStorageService {
         }
     }
 
-    public void getFileInfo(FileUploadType type) {
+    public void getFileInfoList(FileUploadType type) {
 
         String path = fileLocalProperties.getConcatPath(type);
 
@@ -198,7 +167,7 @@ public class FileStorageService {
                     if (file1.isDirectory() || file1.getName().endsWith(FileConstants.TEMP_SUFFIX)) {
                         continue;
                     }
-                    FileInfo fileInfo = getFileInfo(file1, type);
+                    FileInfo fileInfo = getFileInfoList(file1, type);
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
                 }
@@ -211,13 +180,32 @@ public class FileStorageService {
         FileConstants.FILE_CACHE.put(type, new ArrayList<>());
     }
 
+
+    private FileInfo getMd5FileInfo(File file, FileUploadType type) {
+        String path = fileLocalProperties.getConcatPath(type);
+        FileInfo result;
+        if (type.getMd5Name()) {
+            try {
+                String fileName =  FileStorageUtils.getFileName(file);
+                File fileNew = new File(path + fileName);
+                file.renameTo(fileNew);
+                result = getFileInfoList(fileNew, type);
+                FileConstants.FILE_CACHE.get(type).add(0, result);
+                return result;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return getFileInfoList(file, type);
+    }
     /**
      * 判断是否输出文件路径
      *
      * @param file 文件名称
      * @return .
      */
-    private FileInfo getFileInfo(File file, FileUploadType type) {
+    private FileInfo getFileInfoList(File file, FileUploadType type) {
         String contentType = null;
         try {
             contentType = Files.probeContentType(Paths.get(file.getPath()));

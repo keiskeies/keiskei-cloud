@@ -47,9 +47,7 @@ public class FileStorageService {
 
     public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
         File file = MultiFileUtils.upload(fileInfo, fileLocalProperties.getConcatPath(type));
-        FileInfo result = getMd5FileInfo(file, type);
-        FileConstants.FILE_CACHE.get(type).add(0, result);
-        return result;
+        return getMd5FileInfo(file, type);
     }
 
 
@@ -78,16 +76,14 @@ public class FileStorageService {
     public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
         File file = MultiFileUtils.mergingParts(fileInfo, path);
-        FileInfo result = getMd5FileInfo(file, type);
-        FileConstants.FILE_CACHE.get(type).add(0, result);
-        return result;
+        return getMd5FileInfo(file, type);
     }
 
 
     public FileInfo exist(String fileName, FileUploadType type) {
         File file = MultiFileUtils.exitFile(fileLocalProperties.getConcatPath(type), fileName);
         assert file != null;
-        return getFileInfoList(file, type);
+        return getFileInfo(file, type);
     }
 
 
@@ -167,7 +163,7 @@ public class FileStorageService {
                     if (file1.isDirectory() || file1.getName().endsWith(FileConstants.TEMP_SUFFIX)) {
                         continue;
                     }
-                    FileInfo fileInfo = getFileInfoList(file1, type);
+                    FileInfo fileInfo = getFileInfo(file1, type);
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
                 }
@@ -189,7 +185,7 @@ public class FileStorageService {
                 String fileName =  FileStorageUtils.getFileName(file);
                 File fileNew = new File(path + fileName);
                 file.renameTo(fileNew);
-                result = getFileInfoList(fileNew, type);
+                result = getFileInfo(fileNew, type);
                 FileConstants.FILE_CACHE.get(type).add(0, result);
                 return result;
             } catch (IOException e) {
@@ -197,7 +193,7 @@ public class FileStorageService {
             }
         }
 
-        return getFileInfoList(file, type);
+        return getFileInfo(file, type);
     }
     /**
      * 判断是否输出文件路径
@@ -205,7 +201,7 @@ public class FileStorageService {
      * @param file 文件名称
      * @return .
      */
-    private FileInfo getFileInfoList(File file, FileUploadType type) {
+    private FileInfo getFileInfo(File file, FileUploadType type) {
         String contentType = null;
         try {
             contentType = Files.probeContentType(Paths.get(file.getPath()));

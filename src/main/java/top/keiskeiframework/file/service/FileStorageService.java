@@ -167,7 +167,7 @@ public class FileStorageService {
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
                 }
-                result = result.stream().sorted(Comparator.comparing(FileInfo::getName)).collect(Collectors.toList());
+                result = result.stream().sorted(Comparator.comparing(FileInfo::getUploadTime).reversed()).collect(Collectors.toList());
                 FileConstants.FILE_CACHE.put(type, result);
                 return;
             }

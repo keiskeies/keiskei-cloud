@@ -76,6 +76,7 @@ public class FileShowUtils {
             showImage(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
         } else {
             try {
+                String contentType = null;
                 Thumbnails.Builder<File> thumbnails = Thumbnails.of(path + fileName);
                 // 获取文件原始宽高
                 BufferedImage bi = Thumbnails.of(path + fileName).scale(1D).asBufferedImage();
@@ -108,13 +109,18 @@ public class FileShowUtils {
                 if (null != imageProcess.getFormat()) {
                     // 图片格式转换
                     thumbnails.outputFormat(imageProcess.getFormat());
-                    response.setContentType("image/" + imageProcess.getFormat());
+                    contentType = "image/" + imageProcess.getFormat();
+
                 }
                 if (null != imageProcess.getRotate()) {
                     // 图片旋转
                     thumbnails.rotate(imageProcess.getRotate());
                 }
 
+                if (!StringUtils.hasText(contentType)) {
+                    contentType = "image/jpeg";
+                }
+                response.setContentType(contentType);
                 OutputStream os = response.getOutputStream();
                 thumbnails.toOutputStream(os);
 
@@ -160,6 +166,9 @@ public class FileShowUtils {
             String contentType = request.getServletContext().getMimeType(fileName);
             if (!StringUtils.hasText(contentType)) {
                 contentType = Files.probeContentType(Paths.get(path + fileName));
+            }
+            if (!StringUtils.hasText(contentType)) {
+                contentType = "image/jpeg";
             }
             response.setContentType(contentType);
         } catch (IOException e) {

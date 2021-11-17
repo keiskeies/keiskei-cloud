@@ -26,7 +26,7 @@ public class VideoFileShowUtils {
                 String params = matcher.replaceAll("");
                 File tempFile = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
                 if (tempFile.exists() && tempFile.length() > 0) {
-                    show(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
+                    ImageFileShowUtils.show(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
                 } else {
                     VideoProcess videoProcess = new VideoProcess(processes);
                     if (null != videoProcess.getSnapshot()) {

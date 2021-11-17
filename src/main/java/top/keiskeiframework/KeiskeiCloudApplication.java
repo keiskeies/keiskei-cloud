@@ -14,12 +14,5 @@ public class KeiskeiCloudApplication {
         SpringApplication.run(KeiskeiCloudApplication.class, args);
     }
 
-    @Bean
-    public ServletWebServerFactory webServerFactory () {
-        TomcatServletWebServerFactory fa = new TomcatServletWebServerFactory();
-        fa.addConnectorCustomizers(connector ->
-                connector.setProperty("relaxedQueryChars", "{}[];:"));
-        return fa;
-    }
 
 }

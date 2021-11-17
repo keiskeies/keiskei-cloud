@@ -30,13 +30,15 @@ public class VideoFileShowUtils {
                 } else {
                     VideoProcess videoProcess = new VideoProcess(processes);
                     if (null != videoProcess.getSnapshot()) {
-                        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                            BufferedImage bufferedImage = videoProcess.getSnapshot().snapshot(new File(path + fileName), response, fos);
+                        try {
+                            BufferedImage bufferedImage = videoProcess.getSnapshot().snapshot(new File(path + fileName));
                             String f = StringUtils.hasText(videoProcess.getSnapshot().getF()) ? videoProcess.getSnapshot().getF() : "jpg";
                             response.setContentType("image/" + f);
                             OutputStream os = response.getOutputStream();
                             ImageIO.write(bufferedImage, f, os);
-                            ImageIO.write(bufferedImage, f, fos);
+                            try (FileOutputStream fos = new FileOutputStream(tempFile)){
+                                ImageIO.write(bufferedImage, f, fos);
+                            }
                             return;
                         } catch (IOException e) {
                             e.printStackTrace();

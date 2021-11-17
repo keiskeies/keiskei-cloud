@@ -24,7 +24,7 @@ public class Snapshot {
      * 指定截图时间。	[0,视频时长]
      * 单位：ms
      */
-    private Long t;
+    private Long t = 0L;
     /**
      * 指定截图宽度，如果指定为0，则自动计算。	[0,视频宽度]
      * 单位：像素（px）
@@ -63,7 +63,7 @@ public class Snapshot {
         }
     }
 
-    public BufferedImage snapshot(File video, HttpServletResponse response, FileOutputStream fos) throws IOException {
+    public BufferedImage snapshot(File video) throws IOException {
         FFmpegFrameGrabber ff = new FFmpegFrameGrabber(video);
         ff.start();
         // 截取中间帧图片(具体依实际情况而定)
@@ -82,6 +82,7 @@ public class Snapshot {
             }
             i++;
         }
+
 
         // 截取的帧图片
         Java2DFrameConverter converter = new Java2DFrameConverter();

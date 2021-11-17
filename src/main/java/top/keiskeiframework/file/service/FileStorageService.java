@@ -193,6 +193,9 @@ public class FileStorageService {
         if (type.getMd5Name()) {
             try {
                 String fileName = FileStorageUtils.getFileName(file);
+                if (file.getName().equals(fileName)) {
+                    throw new IOException("file name same");
+                }
                 File fileNew = new File(path + fileName);
                 file.renameTo(fileNew);
                 result = getFileInfo(fileNew, type);

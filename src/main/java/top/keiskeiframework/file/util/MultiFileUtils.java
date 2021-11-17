@@ -8,7 +8,11 @@ import top.keiskeiframework.common.exception.BizException;
 import top.keiskeiframework.file.dto.MultiFileInfo;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 
@@ -82,22 +86,7 @@ public class MultiFileUtils {
 
 
     public static synchronized void savePartFile(MultiFileInfo fileInfo, String path) {
-        //禁用FileInfo.exists()类, 防止缓存导致并发问题
-        File targetFile = new File(path, fileInfo.getFileName());
-        if (!(targetFile.exists() && targetFile.isFile())) {
-            //上锁
-            REENTRANT_LOCK.lock();
-
-            if (!(targetFile.exists() && targetFile.isFile())) {
-                try (RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws")) {
-                targetSpaceFile.setLength(fileInfo.getFileSize());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            //释放锁
-            REENTRANT_LOCK.unlock();
-        }
+        File targetFile = initPartsFile(fileInfo, path);
         long startPointer = getFileWriterStartPointer(fileInfo.getFile(), fileInfo);
 
         try (
@@ -117,27 +106,44 @@ public class MultiFileUtils {
 
     public static synchronized void saveBlobPartFile(MultiFileInfo fileInfo, String path) {
 
-        File targetFile = new File(path, fileInfo.getFileName());
-        REENTRANT_LOCK.lock();
-        //上锁
+        File targetFile = initPartsFile(fileInfo, path);
 
         try (
-                RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws");
+                FileOutputStream out = new FileOutputStream(targetFile, true);
+                FileChannel outChannel = out.getChannel()
         ) {
             byte[] blobs = Base64.decodeBase64(fileInfo.getBlobBase64());
-            if (!(targetFile.exists() && targetFile.isFile())) {
-                targetSpaceFile.setLength(fileInfo.getFileSize());
-            }
-            targetSpaceFile.seek(getBlobFileWriterStartPointer(blobs.length, fileInfo));
-            targetSpaceFile.write(blobs, 0, blobs.length);
+            ByteBuffer byteBuffer = ByteBuffer.wrap(blobs);
+            long startPointer = getBlobFileWriterStartPointer(blobs.length, fileInfo);
+            outChannel.write(byteBuffer, startPointer);
         } catch (IOException e) {
             e.printStackTrace();
             targetFile.deleteOnExit();
             throw new RuntimeException("file upload fail!");
         }
-        //释放锁
-        REENTRANT_LOCK.unlock();
+
     }
+
+    private static File initPartsFile(MultiFileInfo fileInfo, String path) {
+        File targetFile = new File(path, fileInfo.getFileName());
+        //上锁
+        if (!(targetFile.exists() && targetFile.isFile())) {
+            //上锁
+            REENTRANT_LOCK.lock();
+
+            if (!(targetFile.exists() && targetFile.isFile())) {
+                try (RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws")) {
+                    targetSpaceFile.setLength(fileInfo.getFileSize());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            //释放锁
+            REENTRANT_LOCK.unlock();
+        }
+        return targetFile;
+    }
+
 
 
     /**

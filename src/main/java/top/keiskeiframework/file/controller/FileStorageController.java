@@ -31,7 +31,7 @@ import java.util.List;
  */
 @Controller
 @CrossOrigin
-@RequestMapping("/api/file/")
+@RequestMapping("/api/file//{type:image|video}")
 public class FileStorageController {
 
     @Autowired
@@ -54,7 +54,7 @@ public class FileStorageController {
      * @param file 文件信息
      * @return .
      */
-    @PostMapping("/{type:image|video}/upload")
+    @PostMapping("/upload")
     @ResponseBody
     public R<FileInfo> upload(
             MultipartFile file,
@@ -72,7 +72,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/{type:image|video}/uploadPart")
+    @PostMapping("/uploadPart")
     public R<Boolean> uploadPart(
             @Validated({UploadPart.class}) MultiFileInfo fileInfo,
             @PathVariable FileUploadType type
@@ -88,7 +88,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/{type:image|video}/uploadBlobPart")
+    @PostMapping("/uploadBlobPart")
     public R<Boolean> uploadBlobPart(
             @RequestBody @Validated({UploadBlobPart.class}) MultiFileInfo fileInfo,
             @PathVariable FileUploadType type
@@ -104,7 +104,7 @@ public class FileStorageController {
      * @return .
      */
     @ResponseBody
-    @PostMapping("/{type:image|video}/mergingPart")
+    @PostMapping("/mergingPart")
     public R<FileInfo> mergingPart(
             @RequestBody @Validated({MergingChunks.class}) MultiFileInfo fileInfo,
             @PathVariable FileUploadType type
@@ -113,27 +113,12 @@ public class FileStorageController {
     }
 
     /**
-     * 判断文件是否存在
-     *
-     * @param fileName 文件名
-     * @return .
-     */
-    @GetMapping("/{type:image|video}/exist/{fileName}")
-    @ResponseBody
-    public R<FileInfo> exist(
-            @PathVariable("fileName") String fileName,
-            @PathVariable FileUploadType type
-    ) {
-        return R.ok(fileStorageService.exist(fileName.trim(), type));
-    }
-
-    /**
      * 删除文件
      *
      * @param fileName 文件名
      * @return .
      */
-    @DeleteMapping("/{type:image|video}/delete/{fileName}")
+    @DeleteMapping("/delete/{fileName}")
     @ResponseBody
     public R<FileInfo> delete(
             @PathVariable("fileName") String fileName,
@@ -145,7 +130,7 @@ public class FileStorageController {
         return R.ok();
     }
 
-    @GetMapping("/{type:image|video}/list")
+    @GetMapping("/list")
     @ResponseBody
     public R<Page<FileInfo>> list(
             @PathVariable FileUploadType type,
@@ -154,7 +139,7 @@ public class FileStorageController {
         return R.ok(fileStorageService.list(type, offset));
     }
 
-    @GetMapping("/{type:image|video}/sort")
+    @GetMapping("/sort")
     @ResponseBody
     public R sort(@PathVariable FileUploadType type) {
         fileStorageService.sort(type);
@@ -170,7 +155,7 @@ public class FileStorageController {
      * @param response response
      * @param process  文件处理参数
      */
-    @GetMapping("/{type:image|video}/show/{fileName}")
+    @GetMapping("/show/{fileName}")
     public void show(@PathVariable("fileName") String fileName,
                      HttpServletRequest request,
                      HttpServletResponse response,

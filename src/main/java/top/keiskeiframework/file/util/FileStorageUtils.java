@@ -45,31 +45,6 @@ public class FileStorageUtils {
         return fileName.replaceAll("[\\s\\S]+\\.(.*?)", md5 + ".$1").toLowerCase();
     }
 
-
-//    public static boolean validFileType(MultiFileInfo fileInfo)  {
-//
-//        String fileSuffix = getFileSuffix(fileInfo);
-//        try {
-//            String fileMagicNumber = FileTypeEnum.get(fileSuffix);
-//            if (!StringUtils.isEmpty(fileMagicNumber)) {
-//                InputStream is = fileInfo.getFile().getInputStream();
-//                if (is.available() > 0) {
-//                    byte[] b = new byte[fileMagicNumber.length() / 2];
-//                    is.read(b);
-//                    if (getHex(b).equalsIgnoreCase(fileMagicNumber)) {
-//                        return true;
-//                    } else {
-//                        System.out.println(fileSuffix + " : " + getHex(b));
-//                    }
-//                }
-//
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return false;
-//    }
-
     /**
      * 获取16进制表示的魔数
      *

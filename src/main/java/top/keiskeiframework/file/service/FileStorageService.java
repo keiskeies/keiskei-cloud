@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import top.keiskeiframework.common.exception.BizException;
-import top.keiskeiframework.common.vo.R;
 import top.keiskeiframework.file.config.FileLocalProperties;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.dto.FileInfo;
@@ -13,7 +12,7 @@ import top.keiskeiframework.file.dto.MultiFileInfo;
 import top.keiskeiframework.file.dto.Page;
 import top.keiskeiframework.file.enums.FileStorageExceptionEnum;
 import top.keiskeiframework.file.enums.FileUploadType;
-import top.keiskeiframework.file.util.FileShowUtils;
+import top.keiskeiframework.file.service.impl.ImageFileShowServiceImpl;
 import top.keiskeiframework.file.util.FileStorageUtils;
 import top.keiskeiframework.file.util.MultiFileUtils;
 
@@ -82,12 +81,6 @@ public class FileStorageService {
     }
 
 
-    public FileInfo exist(String fileName, FileUploadType type) {
-        File file = MultiFileUtils.exitFile(fileLocalProperties.getConcatPath(type), fileName);
-        assert file != null;
-        return getFileInfo(file, type);
-    }
-
 
     public void delete(String fileName, FileUploadType type, Integer index) {
         File file = new File(fileLocalProperties.getConcatPath(type), fileName);
@@ -116,6 +109,7 @@ public class FileStorageService {
         return new Page<>(total, data);
     }
 
+
     public void sort(FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
         File fileDir = new File(path);
@@ -136,19 +130,15 @@ public class FileStorageService {
 
     public void show(String fileName, FileUploadType type, String process, HttpServletRequest request, HttpServletResponse response) {
 
-        try {
-            if (null == exist(fileName, type)) {
-                throw new RuntimeException(FileStorageExceptionEnum.FILE_DOWN_FAIL.getMsg());
-            }
-            FileShowUtils.show(fileLocalProperties.getConcatPath(type), fileName, type, process, request, response);
-        } catch (IOException e) {
-            e.printStackTrace();
-            response.reset();
-            response.setContentType("application/json;charset=utf-8");
-            try {
-                response.getWriter().write(JSON.toJSONString(R.failed(FileStorageExceptionEnum.FILE_DOWN_FAIL)));
-            } catch (IOException ignored) {
-            }
+        FileShowService fileShowService;
+        String path = fileLocalProperties.getConcatPath(type);
+        switch (type) {
+            case image:
+                fileShowService = new ImageFileShowServiceImpl();
+                fileShowService.show(path, fileName, process, request, response);
+            case video:
+                fileShowService = new ImageFileShowServiceImpl();
+                fileShowService.show(path, fileName, process, request, response);
         }
     }
 

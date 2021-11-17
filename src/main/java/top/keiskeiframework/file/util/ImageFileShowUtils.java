@@ -28,6 +28,7 @@ public class ImageFileShowUtils {
                 File tempFile = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
                 if (tempFile.exists() && tempFile.length() > 0) {
                     show(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
+                    return;
                 } else {
                     ImageProcess imageProcess = new ImageProcess(processes);
                     try {

@@ -27,6 +27,7 @@ public class VideoFileShowUtils {
                 File tempFile = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
                 if (tempFile.exists() && tempFile.length() > 0) {
                     ImageFileShowUtils.show(path, fileName + params + FileConstants.TEMP_SUFFIX, request, response);
+                    return;
                 } else {
                     VideoProcess videoProcess = new VideoProcess(processes);
                     if (null != videoProcess.getSnapshot()) {

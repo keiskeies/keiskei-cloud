@@ -156,7 +156,16 @@ public class FileShowUtils {
 
     public static void showImage(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
         File file = new File(path, fileName);
-        response.setContentType(request.getServletContext().getMimeType(fileName));
+        try {
+            String contentType = request.getServletContext().getMimeType(fileName);
+            if (!StringUtils.hasText(contentType)) {
+                contentType = Files.probeContentType(Paths.get(path + fileName));
+            }
+            response.setContentType(contentType);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         try (
                 InputStream is = new FileInputStream(file);
                 ServletOutputStream os = response.getOutputStream()
@@ -177,7 +186,16 @@ public class FileShowUtils {
     public static void showVideo(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
         fileName = path + fileName;
         File file = new File(fileName);
-        String contentType = request.getServletContext().getMimeType(fileName);
+        String contentType = null;
+        try {
+            contentType = request.getServletContext().getMimeType(fileName);
+            if (!StringUtils.hasText(contentType)) {
+                contentType = Files.probeContentType(Paths.get(path + fileName));
+            }
+            response.setContentType(contentType);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         String range = request.getHeader("Range");
         log.info("current request rang:" + range);
         //开始下载位置

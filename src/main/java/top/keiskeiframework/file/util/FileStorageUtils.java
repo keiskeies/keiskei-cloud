@@ -25,23 +25,12 @@ public class FileStorageUtils {
      * @param file 文件信息
      * @return .
      */
-    public static String getFileName(File file) throws IOException {
+    public static String getMd5FileName(File file) throws IOException {
         String fileName = file.getName();
         String md5 = DigestUtils.md5DigestAsHex(new FileInputStream(file));
         if (StringUtils.isEmpty(fileName) || StringUtils.isEmpty(md5)) {
             throw new RuntimeException("fileName get error!");
         }
-        return getFileName(fileName, md5);
-    }
-
-    /**
-     * 获取文件名称
-     *
-     * @param fileName 原文件名称
-     * @param md5      文件MD5
-     * @return .
-     */
-    private static String getFileName(String fileName, String md5) {
         return fileName.replaceAll("[\\s\\S]+\\.(.*?)", md5 + ".$1").toLowerCase();
     }
 

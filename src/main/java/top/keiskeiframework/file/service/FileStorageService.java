@@ -2,30 +2,31 @@ package top.keiskeiframework.file.service;
 
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import top.keiskeiframework.common.exception.BizException;
 import top.keiskeiframework.file.config.FileLocalProperties;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.dto.FileInfo;
 import top.keiskeiframework.file.dto.MultiFileInfo;
 import top.keiskeiframework.file.dto.Page;
-import top.keiskeiframework.file.enums.FileStorageExceptionEnum;
 import top.keiskeiframework.file.enums.FileUploadType;
-import top.keiskeiframework.file.service.impl.ImageFileShowServiceImpl;
 import top.keiskeiframework.file.util.FileStorageUtils;
-import top.keiskeiframework.file.util.MultiFileUtils;
+import top.keiskeiframework.file.util.ImageFileShowUtils;
+import top.keiskeiframework.file.util.VideoFileShowUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -45,41 +46,71 @@ public class FileStorageService {
     @Autowired
     private FileLocalProperties fileLocalProperties;
     private static final int PAGE_SIZE = 20;
+    private static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
 
 
     public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
-        File file = MultiFileUtils.upload(fileInfo, fileLocalProperties.getConcatPath(type));
-        return getMd5FileInfo(file, type);
+
+        File targetFile = initPartsFile(fileInfo, fileLocalProperties.getConcatPath(type));
+
+        try (
+                FileChannel inChannel = ((FileInputStream) fileInfo.getFile().getInputStream()).getChannel();
+                FileOutputStream out = new FileOutputStream(targetFile, true);
+                FileChannel outChannel = out.getChannel()
+        ) {
+
+            outChannel.transferFrom(inChannel, 0, fileInfo.getFile().getSize());
+        } catch (IOException e) {
+            e.printStackTrace();
+            targetFile.deleteOnExit();
+            throw new RuntimeException("file upload fail!");
+        }
+
+        return getMd5FileInfo(targetFile, type);
     }
 
 
     public void uploadPart(MultiFileInfo fileInfo, FileUploadType type) {
-        try {
-            //切片上传
-            MultiFileUtils.savePartFile(fileInfo, fileLocalProperties.getConcatPath(type));
-        } catch (Exception e) {
+        File targetFile = initPartsFile(fileInfo, fileLocalProperties.getConcatPath(type));
+        long startPointer = getFileWriterStartPointer(fileInfo.getFile().getSize(), fileInfo);
+
+        try (
+                FileChannel inChannel = ((FileInputStream) fileInfo.getFile().getInputStream()).getChannel();
+                FileOutputStream out = new FileOutputStream(targetFile, true);
+                FileChannel outChannel = out.getChannel()
+        ) {
+            outChannel.transferFrom(inChannel, startPointer, fileInfo.getFile().getSize());
+        } catch (IOException e) {
             e.printStackTrace();
-            throw new BizException(FileStorageExceptionEnum.FILE_UPLOAD_FAIL);
+            targetFile.deleteOnExit();
+            throw new RuntimeException("file upload fail!");
         }
     }
 
     public void uploadBlobPart(MultiFileInfo fileInfo, FileUploadType type) {
-        try {
-            //切片上传
-            MultiFileUtils.saveBlobPartFile(fileInfo, fileLocalProperties.getConcatPath(type));
-        } catch (Exception e) {
+        File targetFile = initPartsFile(fileInfo, fileLocalProperties.getConcatPath(type));
+
+        try (
+                FileOutputStream out = new FileOutputStream(targetFile, true);
+                FileChannel outChannel = out.getChannel()
+        ) {
+            byte[] blobs = Base64.decodeBase64(fileInfo.getBlobBase64());
+            ByteBuffer byteBuffer = ByteBuffer.wrap(blobs);
+            long startPointer = getFileWriterStartPointer(blobs.length, fileInfo);
+            outChannel.write(byteBuffer, startPointer);
+        } catch (IOException e) {
             e.printStackTrace();
-            throw new BizException(FileStorageExceptionEnum.FILE_UPLOAD_FAIL);
+            targetFile.deleteOnExit();
+            throw new RuntimeException("file upload fail!");
         }
     }
 
 
     public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
-        File file = MultiFileUtils.mergingParts(fileInfo, path);
+        File file = new File(path, fileInfo.getFileName());
         return getMd5FileInfo(file, type);
     }
-
 
 
     public void delete(String fileName, FileUploadType type, Integer index) {
@@ -130,15 +161,12 @@ public class FileStorageService {
 
     public void show(String fileName, FileUploadType type, String process, HttpServletRequest request, HttpServletResponse response) {
 
-        FileShowService fileShowService;
         String path = fileLocalProperties.getConcatPath(type);
         switch (type) {
             case image:
-                fileShowService = new ImageFileShowServiceImpl();
-                fileShowService.show(path, fileName, process, request, response);
+                ImageFileShowUtils.show(path, fileName, process, request, response);
             case video:
-                fileShowService = new ImageFileShowServiceImpl();
-                fileShowService.show(path, fileName, process, request, response);
+                VideoFileShowUtils.show(path, fileName, process, request, response);
         }
     }
 
@@ -177,30 +205,6 @@ public class FileStorageService {
     }
 
 
-    private FileInfo getMd5FileInfo(File file, FileUploadType type) {
-        String path = fileLocalProperties.getConcatPath(type);
-        FileInfo result;
-        if (type.getMd5Name()) {
-            try {
-                String fileName = FileStorageUtils.getFileName(file);
-                if (file.getName().equals(fileName)) {
-                    throw new IOException("file name same");
-                }
-                File fileNew = new File(path + fileName);
-                file.renameTo(fileNew);
-                result = getFileInfo(fileNew, type);
-                FileConstants.FILE_CACHE.get(type).add(0, result);
-                return result;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        result = getFileInfo(file, type);
-        FileConstants.FILE_CACHE.get(type).add(0, result);
-        return result;
-    }
-
     /**
      * 判断是否输出文件路径
      *
@@ -226,6 +230,69 @@ public class FileStorageService {
                 .setContentType(contentType)
                 .setLength(file.length())
                 .setUploadTime(tsStr);
+    }
+
+    /**
+     * 计算指针开始位置
+     *
+     * @param fileInfo:分片实体类
+     */
+    private static Long getFileWriterStartPointer(long chunkSize, MultiFileInfo fileInfo) {
+        int currChunk = fileInfo.getIndex();
+        int allChunks = fileInfo.getPartCount();
+        long allSize = fileInfo.getFileSize();
+        if (currChunk < (allChunks - 1)) {
+            return chunkSize * currChunk;
+        } else if (currChunk == (allChunks - 1)) {
+            return allSize - chunkSize;
+        } else {
+            throw new RuntimeException("file part error!");
+        }
+    }
+
+    private static File initPartsFile(MultiFileInfo fileInfo, String path) {
+        File targetFile = new File(path, fileInfo.getFileName());
+        //上锁
+        if (!(targetFile.exists() && targetFile.isFile())) {
+            //上锁
+            REENTRANT_LOCK.lock();
+
+            if (!(targetFile.exists() && targetFile.isFile())) {
+                try (RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws")) {
+                    targetSpaceFile.setLength(fileInfo.getFileSize());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            //释放锁
+            REENTRANT_LOCK.unlock();
+        }
+        return targetFile;
+    }
+
+
+    private FileInfo getMd5FileInfo(File file, FileUploadType type) {
+        String path = fileLocalProperties.getConcatPath(type);
+        FileInfo result;
+        if (type.getMd5Name()) {
+            try {
+                String fileName = FileStorageUtils.getMd5FileName(file);
+                if (file.getName().equals(fileName)) {
+                    throw new IOException("file name same");
+                }
+                File fileNew = new File(path + fileName);
+                file.renameTo(fileNew);
+                result = getFileInfo(fileNew, type);
+                FileConstants.FILE_CACHE.get(type).add(0, result);
+                return result;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        result = getFileInfo(file, type);
+        FileConstants.FILE_CACHE.get(type).add(0, result);
+        return result;
     }
 
 }

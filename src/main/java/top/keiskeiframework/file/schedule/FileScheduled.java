@@ -8,9 +8,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import top.keiskeiframework.file.config.FileLocalProperties;
 import top.keiskeiframework.file.enums.FileUploadType;
 import top.keiskeiframework.file.service.FileStorageService;
-import top.keiskeiframework.file.util.MultiFileUtils;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
 
 @Configuration
 @EnableScheduling
@@ -23,13 +23,26 @@ public class FileScheduled {
     private FileLocalProperties fileLocalProperties;
 
 
-    @PostConstruct
+
     @Scheduled(cron = "0 */5 * * * ?")
     public void getFileList() {
         for (FileUploadType fileUploadType : FileUploadType.values()) {
-            MultiFileUtils.checkDir(fileLocalProperties.getConcatPath(fileUploadType));
             fileStorageService.getFileInfoList(fileUploadType);
         }
+    }
+
+    @PostConstruct
+    public void checkDir() {
+        for (FileUploadType fileUploadType : FileUploadType.values()) {
+            File file = new File(fileLocalProperties.getConcatPath(fileUploadType));
+            if (!file.exists() || !file.isDirectory()) {
+                if (!file.mkdirs()) {
+                    throw new RuntimeException("dir make fail!");
+                }
+            }
+            fileStorageService.getFileInfoList(fileUploadType);
+        }
+
     }
 
 

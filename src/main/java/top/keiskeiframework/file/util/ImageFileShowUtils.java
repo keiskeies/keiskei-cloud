@@ -1,11 +1,10 @@
-package top.keiskeiframework.file.service.impl;
+package top.keiskeiframework.file.util;
 
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.process.ImageProcess;
-import top.keiskeiframework.file.service.FileShowService;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -16,16 +15,15 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.regex.Matcher;
 
-public class ImageFileShowServiceImpl implements FileShowService {
+public class ImageFileShowUtils {
 
-    @Override
-    public void show(String path, String fileName, String process, HttpServletRequest request, HttpServletResponse response) {
+    public static void show(String path, String fileName, String process, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.hasText(process)) {
             String[] processes = process.split("/");
             if (processes.length > 1) {
 
 
-                Matcher matcher = PROCESS_PARAMS_PATTERN.matcher(request.getQueryString());
+                Matcher matcher = FileConstants.PROCESS_PARAMS_PATTERN.matcher(request.getQueryString());
                 String params = matcher.replaceAll("");
                 File tempFile = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
                 if (tempFile.exists() && tempFile.length() > 0) {
@@ -98,8 +96,7 @@ public class ImageFileShowServiceImpl implements FileShowService {
         show(path, fileName, request, response);
     }
 
-    @Override
-    public void show(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
+    public static void show(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
         File file = new File(path, fileName);
         try {
             String contentType = request.getServletContext().getMimeType(fileName);

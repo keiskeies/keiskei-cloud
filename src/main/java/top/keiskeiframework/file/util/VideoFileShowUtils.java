@@ -1,11 +1,10 @@
-package top.keiskeiframework.file.service.impl;
+package top.keiskeiframework.file.util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.util.StringUtils;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.process.VideoProcess;
-import top.keiskeiframework.file.service.FileShowService;
 
 import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
@@ -18,15 +17,12 @@ import java.nio.file.Paths;
 import java.util.regex.Matcher;
 
 @Slf4j
-public class VideoFileShowServiceImpl implements FileShowService {
-    @Override
-    public void show(String path, String fileName, String process, HttpServletRequest request, HttpServletResponse response) {
+public class VideoFileShowUtils {
+    public static void show(String path, String fileName, String process, HttpServletRequest request, HttpServletResponse response) {
         if (StringUtils.hasText(process)) {
             String[] processes = process.split("/");
             if (processes.length > 1) {
-
-
-                Matcher matcher = PROCESS_PARAMS_PATTERN.matcher(request.getQueryString());
+                Matcher matcher = FileConstants.PROCESS_PARAMS_PATTERN.matcher(request.getQueryString());
                 String params = matcher.replaceAll("");
                 File tempFile = new File(path, fileName + params + FileConstants.TEMP_SUFFIX);
                 if (tempFile.exists() && tempFile.length() > 0) {
@@ -54,8 +50,7 @@ public class VideoFileShowServiceImpl implements FileShowService {
         show(path, fileName, request, response);
     }
 
-    @Override
-    public void show(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
+    public static void show(String path, String fileName, HttpServletRequest request, HttpServletResponse response) {
         fileName = path + fileName;
         File file = new File(fileName);
 
@@ -113,19 +108,21 @@ public class VideoFileShowServiceImpl implements FileShowService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        response.setHeader("Accept-Ranges", "bytes");
         response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+        response.setHeader("Accept-Ranges", "bytes");
         response.setHeader("Content-Disposition", "inline;filename=" + fileName);
         response.setHeader("Content-Length", String.valueOf(contentLength));
         response.setHeader("Content-Range", "bytes " + startByte + "-" + endByte + "/" + file.length());
 
-        BufferedOutputStream outputStream = null;
-        RandomAccessFile randomAccessFile = null;
+
         //已传送数据大小
         long transmitted = 0;
-        try {
-            randomAccessFile = new RandomAccessFile(file, "r");
-            outputStream = new BufferedOutputStream(response.getOutputStream());
+        try (
+                BufferedOutputStream outputStream = new BufferedOutputStream(response.getOutputStream());
+                RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+        ) {
+
+
             byte[] buff = new byte[4096];
             int len = 0;
             randomAccessFile.seek(startByte);
@@ -147,14 +144,6 @@ public class VideoFileShowServiceImpl implements FileShowService {
             log.warn("用户停止下载：" + startByte + "-" + endByte + "：" + transmitted);
         } catch (IOException e) {
             log.error("用户下载IO异常，Message：{}", e.getLocalizedMessage());
-        } finally {
-            try {
-                if (randomAccessFile != null) {
-                    randomAccessFile.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 

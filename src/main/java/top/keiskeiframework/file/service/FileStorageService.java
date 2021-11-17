@@ -26,6 +26,9 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -70,7 +73,6 @@ public class FileStorageService {
             throw new BizException(FileStorageExceptionEnum.FILE_UPLOAD_FAIL);
         }
     }
-
 
 
     public FileInfo mergingPart(MultiFileInfo fileInfo, FileUploadType type) {
@@ -167,7 +169,10 @@ public class FileStorageService {
                     result.add(fileInfo);
                     log.info(JSON.toJSONString(fileInfo));
                 }
-                result = result.stream().sorted(Comparator.comparing(FileInfo::getUploadTime).reversed()).collect(Collectors.toList());
+                result = result.stream()
+                        .filter(distinctByKey(FileInfo::getName))
+                        .sorted(Comparator.comparing(FileInfo::getUploadTime).reversed())
+                        .collect(Collectors.toList());
                 FileConstants.FILE_CACHE.put(type, result);
                 return;
             }
@@ -176,13 +181,18 @@ public class FileStorageService {
         FileConstants.FILE_CACHE.put(type, new ArrayList<>());
     }
 
+    public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        Set<Object> seen = ConcurrentHashMap.newKeySet();
+        return t -> seen.add(keyExtractor.apply(t));
+    }
+
 
     private FileInfo getMd5FileInfo(File file, FileUploadType type) {
         String path = fileLocalProperties.getConcatPath(type);
         FileInfo result;
         if (type.getMd5Name()) {
             try {
-                String fileName =  FileStorageUtils.getFileName(file);
+                String fileName = FileStorageUtils.getFileName(file);
                 File fileNew = new File(path + fileName);
                 file.renameTo(fileNew);
                 result = getFileInfo(fileNew, type);
@@ -197,6 +207,7 @@ public class FileStorageService {
         FileConstants.FILE_CACHE.get(type).add(0, result);
         return result;
     }
+
     /**
      * 判断是否输出文件路径
      *

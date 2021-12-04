@@ -31,7 +31,7 @@ import java.util.List;
  */
 @Controller
 @CrossOrigin
-@RequestMapping("/api/file//{type:image|video}")
+@RequestMapping("/api/file/{type:image|video}")
 public class FileStorageController {
 
     @Autowired
@@ -60,8 +60,7 @@ public class FileStorageController {
             MultipartFile file,
             @PathVariable FileUploadType type
     ) {
-        MultiFileInfo fileInfo = new MultiFileInfo(file);
-        return R.ok(fileStorageService.upload(fileInfo, type));
+        return R.ok(fileStorageService.upload(file, type));
     }
 
 

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import sun.nio.ch.ChannelInputStream;
 import top.keiskeiframework.file.config.FileLocalProperties;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.dto.FileInfo;
@@ -49,17 +51,21 @@ public class FileStorageService {
     private static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
 
 
-    public FileInfo upload(MultiFileInfo fileInfo, FileUploadType type) {
+    public FileInfo upload(MultipartFile file, FileUploadType type) {
 
-        File targetFile = initPartsFile(fileInfo, fileLocalProperties.getConcatPath(type));
+        File targetFile = new File(fileLocalProperties.getConcatPath(type), Objects.requireNonNull(file.getOriginalFilename()));
 
         try (
-                FileChannel inChannel = ((FileInputStream) fileInfo.getFile().getInputStream()).getChannel();
+                InputStream is = file.getInputStream();
                 FileOutputStream out = new FileOutputStream(targetFile, true);
-                FileChannel outChannel = out.getChannel()
         ) {
 
-            outChannel.transferFrom(inChannel, 0, fileInfo.getFile().getSize());
+            byte[] buffer = new byte[2048];
+            int len = 0;
+            while ((len = is.read(buffer)) > 0) {
+                out.write(buffer, 0, len);
+            }
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
             targetFile.deleteOnExit();

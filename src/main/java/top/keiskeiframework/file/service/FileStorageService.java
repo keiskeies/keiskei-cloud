@@ -1,12 +1,10 @@
 package top.keiskeiframework.file.service;
 
-import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import sun.nio.ch.ChannelInputStream;
 import top.keiskeiframework.file.config.FileLocalProperties;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.dto.FileInfo;
@@ -54,24 +52,11 @@ public class FileStorageService {
     public FileInfo upload(MultipartFile file, FileUploadType type) {
 
         File targetFile = new File(fileLocalProperties.getConcatPath(type), Objects.requireNonNull(file.getOriginalFilename()));
-
-        try (
-                InputStream is = file.getInputStream();
-                FileOutputStream out = new FileOutputStream(targetFile, true);
-        ) {
-
-            byte[] buffer = new byte[2048];
-            int len = 0;
-            while ((len = is.read(buffer)) > 0) {
-                out.write(buffer, 0, len);
-            }
-            out.flush();
+        try {
+            file.transferTo(targetFile);
         } catch (IOException e) {
             e.printStackTrace();
-            targetFile.deleteOnExit();
-            throw new RuntimeException("file upload fail!");
         }
-
         return getMd5FileInfo(targetFile, type);
     }
 
@@ -191,7 +176,7 @@ public class FileStorageService {
                     }
                     FileInfo fileInfo = getFileInfo(file1, type);
                     result.add(fileInfo);
-                    log.info(JSON.toJSONString(fileInfo));
+                    log.info(fileInfo.toString());
                 }
                 result = result.stream()
                         .filter(distinctByKey(FileInfo::getName))
@@ -261,17 +246,20 @@ public class FileStorageService {
         //上锁
         if (!(targetFile.exists() && targetFile.isFile())) {
             //上锁
-            REENTRANT_LOCK.lock();
-
-            if (!(targetFile.exists() && targetFile.isFile())) {
-                try (RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws")) {
-                    targetSpaceFile.setLength(fileInfo.getFileSize());
-                } catch (IOException e) {
-                    e.printStackTrace();
+            try {
+                REENTRANT_LOCK.lock();
+                if (!(targetFile.exists() && targetFile.isFile())) {
+                    try (RandomAccessFile targetSpaceFile = new RandomAccessFile(targetFile, "rws")) {
+                        targetSpaceFile.setLength(fileInfo.getFileSize());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                REENTRANT_LOCK.unlock();
             }
-            //释放锁
-            REENTRANT_LOCK.unlock();
         }
         return targetFile;
     }

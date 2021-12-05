@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.commons.CommonsMultipartFile;
 import top.keiskeiframework.common.vo.R;
 import top.keiskeiframework.file.annotations.MergingChunks;
 import top.keiskeiframework.file.annotations.UploadBlobPart;
@@ -57,7 +58,7 @@ public class FileStorageController {
     @PostMapping("/upload")
     @ResponseBody
     public R<FileInfo> upload(
-            MultipartFile file,
+            @RequestParam("file") MultipartFile file,
             @PathVariable FileUploadType type
     ) {
         return R.ok(fileStorageService.upload(file, type));

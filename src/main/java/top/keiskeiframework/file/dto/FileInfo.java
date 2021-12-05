@@ -1,6 +1,7 @@
 package top.keiskeiframework.file.dto;
 
 import lombok.Data;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 import java.io.InputStream;
@@ -15,6 +16,7 @@ import java.io.Serializable;
  */
 @Data
 @Accessors(chain = true)
+@ToString
 public class FileInfo implements Serializable {
 
     private static final long serialVersionUID = -507987531536944960L;

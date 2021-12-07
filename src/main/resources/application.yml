@@ -1,7 +1,16 @@
 server:
   port: ${SERVER_PORT:10037}
-  tomcat:
-    max-http-form-post-size: 10GB
+  compression:
+    enabled: true
+  http2:
+    enabled: true
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12 # 启用http2
+    key-store-password: 123456 # 证书密码
+    key-store-type: PKCS12 # 证书类型
+    protocol: TLSv1.2 # 协议类型
+    key-alias: undertow
 keiskei:
   file:
     path: ${FILE_PATH:/temp/file/}

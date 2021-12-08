@@ -1,7 +1,6 @@
 package top.keiskeiframework.file.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,7 +84,7 @@ public class FileStorageService {
                 FileOutputStream out = new FileOutputStream(targetFile, true);
                 FileChannel outChannel = out.getChannel()
         ) {
-            byte[] blobs = Base64.decodeBase64(fileInfo.getBlobBase64());
+            byte[] blobs = Base64.getDecoder().decode(fileInfo.getBlobBase64());
             ByteBuffer byteBuffer = ByteBuffer.wrap(blobs);
             long startPointer = getFileWriterStartPointer(blobs.length, fileInfo);
             outChannel.write(byteBuffer, startPointer);

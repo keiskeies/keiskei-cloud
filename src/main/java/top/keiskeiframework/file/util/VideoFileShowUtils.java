@@ -1,7 +1,6 @@
 package top.keiskeiframework.file.util;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.util.StringUtils;
 import top.keiskeiframework.file.constants.FileConstants;
 import top.keiskeiframework.file.process.VideoProcess;
@@ -143,9 +142,8 @@ public class VideoFileShowUtils {
             response.flushBuffer();
             randomAccessFile.close();
             log.info("下载完毕：" + startByte + "-" + endByte + "：" + transmitted);
-        } catch (ClientAbortException e) {
-            log.warn("用户停止下载：" + startByte + "-" + endByte + "：" + transmitted);
         } catch (IOException e) {
+            log.warn("用户停止下载：" + startByte + "-" + endByte + "：" + transmitted);
             log.error("用户下载IO异常，Message：{}", e.getLocalizedMessage());
         }
     }

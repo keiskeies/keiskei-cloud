@@ -20,3 +20,7 @@ spring:
     multipart:
       max-request-size: 10GB
       max-file-size: 10GB
+  mvc:
+    view:
+      prefix: classpath:/templates/
+      suffix: .html

@@ -1,12 +1,11 @@
 package top.keiskeiframework.common.config;
 
 import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.web.embedded.tomcat.TomcatConnectorCustomizer;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
-import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
-import org.springframework.context.annotation.Bean;
 import org.springframework.lang.NonNull;
-import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @SpringBootConfiguration
 public class MyWebConfigurer implements WebMvcConfigurer {
@@ -32,11 +31,5 @@ public class MyWebConfigurer implements WebMvcConfigurer {
         configurer.setUseSuffixPatternMatch(false);
     }
 
-    @Bean
-    public ConfigurableServletWebServerFactory webServerFactory() {
-        TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
-        factory.addConnectorCustomizers(connector -> connector.setProperty("relaxedQueryChars", "|{}[]\\"));
-        return factory;
-    }
 
 }
